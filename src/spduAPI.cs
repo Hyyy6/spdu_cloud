@@ -15,35 +15,49 @@ namespace api
 {
     public static class spduAPI
     {
+        public static ILogger log {get; private set;}
+        // private static Boolean _authenticate( data) {
+        //     return true;
+        // }
         [FunctionName("spduAPI")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            [Blob("test", Connection = "AzureWebJobsStorage")] CloudBlobContainer outputContainer,
-            ILogger log)
+            [HttpTrigger(AuthorizationLevel.Function, Route = null)] HttpRequest req,
+            [Blob("test", Connection = "AzureWebJobsStorage")] CloudBlobContainer storageBlob,
+            ILogger _log)
         {
+            log = _log;
             log.LogInformation("C# HTTP trigger function processed a request.");
             // log.LogInformation(EnvironmentVariables.getStoreConnectionString);
 
             // if (CloudStorageAccount.TryParse())
-            await outputContainer.CreateIfNotExistsAsync();
-
-            string responseMessage;
-            
-            string name = req.Query["name"];
-
+            await storageBlob.CreateIfNotExistsAsync();
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+            var reqData = JsonConvert.DeserializeObject(requestBody);
+            string name = req.Query["name"];
+            // string responseMessage = "Ok";
+            log.LogInformation(req.Method);
 
-            responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
+            switch (req.Method) {
+                case "PUT":
+                    await BlobRoutine.putData(reqData, name, storageBlob);
+                    return new OkObjectResult("Ok");
+                    // break;
+                
+                case "GET":
+                case "POST":
+                    await BlobRoutine.getData(reqData, name, storageBlob);
+                    return new OkObjectResult("Ok");
+                    // break;
+
+                default:
+                    log.LogInformation("Wrong HTTP request type.");
+                    return new BadRequestObjectResult("Wrong HTTP request");
+                    // break;
+                    
+            }
             
-            log.LogInformation(name);
-            var cloudBlob = outputContainer.GetBlockBlobReference("ip_addr");
-            await cloudBlob.UploadTextAsync(name);
 
-            return new OkObjectResult(responseMessage);
+            // return new OkObjectResult(responseMessage);
         }
     }
 }
