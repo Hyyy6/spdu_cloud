@@ -25,6 +25,7 @@ namespace api
             [Blob("test", Connection = "AzureWebJobsStorage")] CloudBlobContainer storageBlob,
             ILogger _log)
         {
+            IActionResult result;
             log = _log;
             log.LogInformation("C# HTTP trigger function processed a request.");
             // log.LogInformation(EnvironmentVariables.getStoreConnectionString);
@@ -39,14 +40,14 @@ namespace api
 
             switch (req.Method) {
                 case "PUT":
-                    await BlobRoutine.putData(reqData, name, storageBlob);
-                    return new OkObjectResult("Ok");
+                    result = await BlobRoutine.putData(reqData, name, storageBlob);
+                    return new OkObjectResult(result);
                     // break;
                 
                 case "GET":
                 case "POST":
-                    await BlobRoutine.getData(reqData, name, storageBlob);
-                    return new OkObjectResult("Ok");
+                    result = await BlobRoutine.getData(reqData, name, storageBlob);
+                    return new OkObjectResult(result);
                     // break;
 
                 default:

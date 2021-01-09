@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text;
+using System.Security.Cryptography;
 // using Microsoft.Azure.Management.DataFactory.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -28,14 +29,38 @@ namespace shared
     {
         private static bool _authenticate(string pwd)
         {
+            byte[] hashed_data;
+            string hashed_pwd;
+            
+            
+            bool is_local = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
+
+            if (is_local)
+            {
+                spduAPI.log.LogInformation("Successful authentitication (local development).");
+                return true;
+            }
+
+
             if (pwd is null)
                 return false;
 
-            spduAPI.log.LogInformation("auth " + pwd);
+            using (SHA256 hasher = SHA256.Create())
+            {
+                hashed_data = hasher.ComputeHash(Encoding.ASCII.GetBytes(pwd));
+                hashed_pwd = Encoding.UTF8.GetString(hashed_data);
+                spduAPI.log.LogInformation("auth - " + pwd + "\nhashed pass - " + hashed_pwd);
+            }
+            
             // SecureString secureString;
             var secPass = Environment.GetEnvironmentVariable("secret_uri");
+            if (String.Compare(secPass, hashed_pwd) == 0)
+            {
+                spduAPI.log.LogInformation("Successful authentitication.");
+                return true;
+            }
             spduAPI.log.LogInformation(secPass);
-            return true;
+            return false;
         }
         public static async Task<IActionResult> putData(dynamic reqData, string name, CloudBlobContainer storageBlob)
         {
@@ -77,11 +102,12 @@ namespace shared
             spduAPI.log.LogInformation(BitConverter.ToString(_toStream));
             // using (MemoryStream ms = new MemoryStream(_toStream))
             // {
-                spduAPI.log.LogInformation("Upload to " + localIP);
+                spduAPI.log.LogInformation("Upload new local IP " + localIP + " for " + devName);
                 // spduAPI.log.LogInformation(ms.
                 // await cloudBlob.UploadFromStreamAsync(ms);
-                Task ret = cloudBlob.UploadTextAsync("123");
-                await ret;
+                // Task ret = cloudBlob.UploadTextAsync(localIP);
+                // await ret;
+                await cloudBlob.UploadTextAsync(localIP);
                 return new OkObjectResult("Ok");
             // }
             // }
@@ -120,6 +146,7 @@ namespace shared
                 spduAPI.log.LogInformation("download from blob");
                 var ms = new MemoryStream();
                 await cloudBlob.DownloadToStreamAsync(ms);
+                ms.Seek(0, SeekOrigin.Begin);
                 spduAPI.log.LogInformation(ms.Length.ToString());
                 string retData = new StreamReader(ms).ReadToEnd();
                 spduAPI.log.LogInformation(retData);
