@@ -28,25 +28,22 @@ namespace api
             IActionResult result;
             log = _log;
             log.LogInformation("C# HTTP trigger function processed a request.");
-            // log.LogInformation(EnvironmentVariables.getStoreConnectionString);
 
-            // if (CloudStorageAccount.TryParse())
             await storageBlob.CreateIfNotExistsAsync();
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var reqData = JsonConvert.DeserializeObject(requestBody);
-            string name = req.Query["name"];
-            // string responseMessage = "Ok";
+
             log.LogInformation(req.Method);
 
             switch (req.Method) {
                 case "PUT":
-                    result = await BlobRoutine.putData(reqData, name, storageBlob);
+                    result = await BlobRoutine.putData(reqData, storageBlob);
                     return new OkObjectResult(result);
                     // break;
                 
                 case "GET":
                 case "POST":
-                    result = await BlobRoutine.getData(reqData, name, storageBlob);
+                    result = await BlobRoutine.getData(reqData, storageBlob);
                     return new OkObjectResult(result);
                     // break;
 

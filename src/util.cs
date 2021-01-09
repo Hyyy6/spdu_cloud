@@ -20,9 +20,6 @@ namespace shared
         {
             get => Environment.GetEnvironmentVariable(_storeNameVar);
         }
-        //;// _storageEnvVarName ; // = "test";
-        // public static string StorageConnectionString => Environment.GetEnvironmentVariable(_stor);
-        // public static string getStoreConnectionString => _stor;
     }
 
     public static class BlobRoutine
@@ -32,28 +29,17 @@ namespace shared
             byte[] hashed_data;
             string hashed_pwd;
             
-            
-            bool is_local = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
-
-            if (is_local)
-            {
-                spduAPI.log.LogInformation("Successful authentitication (local development).");
-                return true;
-            }
-
-
             if (pwd is null)
                 return false;
 
             using (SHA256 hasher = SHA256.Create())
             {
                 hashed_data = hasher.ComputeHash(Encoding.ASCII.GetBytes(pwd));
-                hashed_pwd = Encoding.UTF8.GetString(hashed_data);
+                hashed_pwd = BitConverter.ToString(hashed_data);
                 spduAPI.log.LogInformation("auth - " + pwd + "\nhashed pass - " + hashed_pwd);
             }
             
-            // SecureString secureString;
-            var secPass = Environment.GetEnvironmentVariable("secret_uri");
+            var secPass = Environment.GetEnvironmentVariable("secret");
             if (String.Compare(secPass, hashed_pwd) == 0)
             {
                 spduAPI.log.LogInformation("Successful authentitication.");
@@ -62,64 +48,62 @@ namespace shared
             spduAPI.log.LogInformation(secPass);
             return false;
         }
-        public static async Task<IActionResult> putData(dynamic reqData, string name, CloudBlobContainer storageBlob)
+
+        private static bool _validateData(dynamic reqData, out ObjectResult res)
         {
-            name = name ?? reqData?.name;
-            // string responseMessage = string.IsNullOrEmpty(name)
-                // ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                // : $"Hello, {name}. This HTTP triggered function executed successfully.";
-            
+            string name = reqData?.name;
+            string pwd = reqData?.pwd;
+            if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(pwd))
+            {
+                res = new ObjectResult("Invalid credentials.");
+                res.StatusCode = StatusCodes.Status400BadRequest;
+                return false;
+            }
+
+            res = new ObjectResult("Ok");
+            return true;
+        }
+        public static async Task<IActionResult> putData(dynamic reqData, CloudBlobContainer storageBlob)
+        {
+            string name = reqData?.name;      
             spduAPI.log.LogInformation("Put data for " + name);
             
             string pwd = reqData?.pwd;
-            if (pwd is null)
+            if (pwd is null || !_authenticate(pwd))
             {
-                ObjectResult result = new ObjectResult("Wrong pwd.");
-                result.StatusCode = StatusCodes.Status400BadRequest;
+                ObjectResult result = new ObjectResult("Could not authenticate.");
+                result.StatusCode = StatusCodes.Status403Forbidden;
                 return result;
             }
-            _authenticate(pwd);
-            string devName = reqData?.dev;
+
+            dynamic payload = reqData?.data;
+            string devName = payload?.dev;
             if (devName is null)
             {
-                ObjectResult result = new ObjectResult("Wrong pwd.");
+                ObjectResult result = new ObjectResult("Check your device name");
                 result.StatusCode = StatusCodes.Status400BadRequest;
                 return result;
             }
             spduAPI.log.LogInformation(devName);
             CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference(devName);
-            // cloudBlob.cre
-            // if (await cloudBlob.ExistsAsync())
-            // {
-                //if (!_parseReqData(reqData.data))
-                // spduAPI.log.LogInformation(reqData.ToString());
-            dynamic devData = reqData?.data;
-            string localIP = devData?.ip;
+
+            string localIP = payload?.ip;
             spduAPI.log.LogInformation(localIP);
-            string devDataStr = devData.ToString();
+            string devDataStr = payload.ToString();
             spduAPI.log.LogInformation(devDataStr);
             byte[] _toStream = Encoding.UTF8.GetBytes(devDataStr);
             spduAPI.log.LogInformation(BitConverter.ToString(_toStream));
-            // using (MemoryStream ms = new MemoryStream(_toStream))
-            // {
-                spduAPI.log.LogInformation("Upload new local IP " + localIP + " for " + devName);
-                // spduAPI.log.LogInformation(ms.
-                // await cloudBlob.UploadFromStreamAsync(ms);
-                // Task ret = cloudBlob.UploadTextAsync(localIP);
-                // await ret;
-                await cloudBlob.UploadTextAsync(localIP);
-                return new OkObjectResult("Ok");
-            // }
-            // }
-            // else
-            {
-                // ObjectResult result = new ObjectResult()
-            }
+
+            spduAPI.log.LogInformation("Upload new local IP " + localIP + " for " + devName);
+
+            await cloudBlob.UploadTextAsync(localIP);
+            return new OkObjectResult("Ok");
+
         }
 
-        public static async Task<IActionResult> getData(dynamic reqData, string name, CloudBlobContainer storageBlob)
+        public static async Task<IActionResult> getData(dynamic reqData, CloudBlobContainer storageBlob)
         {
-            name = name ?? reqData?.name;
+            string name = reqData?.name;
             spduAPI.log.LogInformation("Get data for " + name);
 
             string pwd = reqData?.pwd;
@@ -131,7 +115,8 @@ namespace shared
                 return result;
             }
             _authenticate(pwd);
-            string devName = reqData?.dev;
+            dynamic payload = reqData?.data;
+            string devName = payload?.dev;
             if (devName is null)
             {
                 ObjectResult result = new ObjectResult("Wrong pwd.");
