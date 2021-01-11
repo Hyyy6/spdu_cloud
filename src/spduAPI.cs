@@ -9,16 +9,13 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using shared;
+using utils;
 
-namespace api
+namespace API
 {
-    public static class spduAPI
+    public static class SPDUAPI
     {
         public static ILogger log {get; private set;}
-        // private static Boolean _authenticate( data) {
-        //     return true;
-        // }
         [FunctionName("spduAPI")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, Route = null)] HttpRequest req,
@@ -39,23 +36,18 @@ namespace api
                 case "PUT":
                     result = await BlobRoutine.putData(reqData, storageBlob);
                     return new OkObjectResult(result);
-                    // break;
                 
                 case "GET":
                 case "POST":
                     result = await BlobRoutine.getData(reqData, storageBlob);
                     return new OkObjectResult(result);
-                    // break;
 
                 default:
                     log.LogInformation("Wrong HTTP request type.");
                     return new BadRequestObjectResult("Wrong HTTP request");
-                    // break;
                     
             }
             
-
-            // return new OkObjectResult(responseMessage);
         }
     }
 }
