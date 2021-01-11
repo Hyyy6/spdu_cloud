@@ -39,16 +39,14 @@ namespace utils
             {
                 hashed_data = hasher.ComputeHash(Encoding.ASCII.GetBytes(pwd));
                 hashed_pwd = BitConverter.ToString(hashed_data);
-                SPDUAPI.log.LogInformation("auth - " + pwd + "\nhashed pass - " + hashed_pwd);
             }
             
             var secPass = Environment.GetEnvironmentVariable("secret");
             if (String.Compare(secPass, hashed_pwd) == 0)
             {
-                SPDUAPI.log.LogInformation("Successful authentitication.");
+                SPDUAPI.log.LogInformation("Successful authentitication for {0}.", name);
                 return true;
             }
-            SPDUAPI.log.LogInformation(secPass);
             return false;
         }
 
@@ -113,6 +111,7 @@ namespace utils
             CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference(payload.deviceName);
 
             await cloudBlob.UploadTextAsync(payload.ipAddress);
+            SPDUAPI.log.LogInformation("Put data req processed.");
             return new OkObjectResult(String.Format("Updated {0} local IP address to {1}", payload.deviceName, payload.ipAddress));
 
         }
@@ -158,13 +157,11 @@ namespace utils
 
             if (await cloudBlob.ExistsAsync())
             {
-                SPDUAPI.log.LogInformation("download from blob");
                 var ms = new MemoryStream();
                 await cloudBlob.DownloadToStreamAsync(ms);
                 ms.Seek(0, SeekOrigin.Begin);
-                SPDUAPI.log.LogInformation(ms.Length.ToString());
                 string retData = new StreamReader(ms).ReadToEnd();
-                SPDUAPI.log.LogInformation(retData);
+                SPDUAPI.log.LogInformation("Get data req processed.");
                 return new OkObjectResult(retData);
             }
             else

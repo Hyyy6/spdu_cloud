@@ -18,19 +18,22 @@ namespace API
         public static ILogger log {get; private set;}
         [FunctionName("spduAPI")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, Route = null)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, Route = null)] HttpRequest req,
             [Blob("test", Connection = "AzureWebJobsStorage")] CloudBlobContainer storageBlob,
             ILogger _log)
         {
+            if (!req.IsHttps)
+            {
+                return new BadRequestResult();
+            }
+
             IActionResult result;
             log = _log;
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            log.LogInformation("Processed {0} HTTP request.", req.Method, req);
 
             await storageBlob.CreateIfNotExistsAsync();
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var reqData = JsonConvert.DeserializeObject(requestBody);
-
-            log.LogInformation(req.Method);
 
             switch (req.Method) {
                 case "PUT":
