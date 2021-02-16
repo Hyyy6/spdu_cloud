@@ -110,7 +110,7 @@ namespace utils
 
             CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference(payload.deviceName);
 
-            await cloudBlob.UploadTextAsync(payload.ipAddress);
+            await cloudBlob.UploadTextAsync(payload.ipAddress + "\ntime: " + DateTime.Now.ToString());
             SPDUAPI.log.LogInformation("Put data req processed.");
             return new OkObjectResult(String.Format("Updated {0} local IP address to {1}", payload.deviceName, payload.ipAddress));
 
