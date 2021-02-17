@@ -34,16 +34,25 @@ namespace API
             log.LogInformation("Processed {0} HTTP request.", req.Method, req);
 
             await storageBlob.CreateIfNotExistsAsync();
-            byte[] reqBody = new byte[256];
+            byte[] reqBody = {};
             string requestBody;
+            int contentLength;
             // string requestBody = await new StreamReader(req.Body).ReadAsync();
+            if (req.ContentLength <= 0) {
+                log.LogInformation("Invalid content length.");
+                return new BadRequestObjectResult("Invalid content length.");
+            } else {
+                contentLength = (int)req.ContentLength;
+            }
             try {
-                await req.Body.ReadAsync(reqBody, 0, reqBody.Length);
+                reqBody = new byte[contentLength];
+                await req.Body.ReadAsync(reqBody, 0, contentLength);
             } catch (Exception e) {
                 log.LogInformation(e.Message);
             }
-            log.LogInformation("request length - {0}", reqBody.Length);
-            log.LogInformation(Encoding.Default.GetString(reqBody));
+
+            log.LogInformation("request length - {0}", contentLength);
+            log.LogInformation(Encoding.Default.GetString(reqBody, 0, contentLength));
 
             using (Aes cypher = Aes.Create())
             {
@@ -88,15 +97,21 @@ namespace API
             // Declare the string used to hold
             // the decrypted text.
             string plaintext = null;
-
             // Create an Aes object
             // with the specified key and IV.
             using (Aes aesAlg = Aes.Create())
             {
+                aesAlg.Clear();
+                // aesAlg.Padding = PaddingMode.None;
+                aesAlg.Padding = PaddingMode.PKCS7;
+                // aesAlg.Mode = CipherMode.CBC;
+                aesAlg.BlockSize = 128;
                 aesAlg.Key = Key;
                 aesAlg.IV = IV;
-                aesAlg.BlockSize = 128;
+                // aesAlg.Padding = PaddingMode.Zeros;
 
+                log.LogInformation(Encoding.Default.GetString(aesAlg.Key));
+                log.LogInformation(Encoding.Default.GetString(aesAlg.IV));
                 // Create a decryptor to perform the stream transform.
                 ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
@@ -129,6 +144,17 @@ namespace API
                     try 
                     {
                         byte[] plainTextArr = msDecrypt.ToArray();
+
+                        for (int i = plainTextArr.Length - 1; i > 0; i--) {
+                            if (plainTextArr[i] != 0) {
+                                // log.LogInformation("null char - {0}", 0);
+                                // log.LogInformation("padding ends with {0} at {1}", plainTextArr[i], i);
+                                log.LogInformation("message ends with {0} at {1}", plainTextArr[i], i);
+                                log.LogInformation((plainTextArr.Length - i).ToString());
+                                break;
+                            }
+                        }
+                        // for (int i = )
                         plaintext = Encoding.Default.GetString(plainTextArr);
                     }
                     catch (Exception e)
