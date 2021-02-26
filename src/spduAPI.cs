@@ -52,14 +52,14 @@ namespace API
             }
 
             log.LogInformation("request length - {0}", contentLength);
-            log.LogInformation(Encoding.Default.GetString(reqBody, 0, contentLength));
+            log.LogInformation(Encoding.ASCII.GetString(reqBody, 0, contentLength));
 
             using (Aes cypher = Aes.Create())
             {
                 string key = "abcdefghijklmnop";
                 // byte[] buf = Encoding.ASCII.GetBytes(requestBody);
                 byte[] buf = reqBody;
-                string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(key));
+                string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.ASCII.GetBytes(key), Encoding.ASCII.GetBytes(key));
                 log.LogInformation(decrypted);
                 requestBody = decrypted;
             }
@@ -110,8 +110,8 @@ namespace API
                 aesAlg.IV = IV;
                 // aesAlg.Padding = PaddingMode.Zeros;
 
-                log.LogInformation(Encoding.Default.GetString(aesAlg.Key));
-                log.LogInformation(Encoding.Default.GetString(aesAlg.IV));
+                log.LogInformation(Encoding.ASCII.GetString(aesAlg.Key));
+                log.LogInformation(Encoding.ASCII.GetString(aesAlg.IV));
                 // Create a decryptor to perform the stream transform.
                 ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
@@ -119,18 +119,20 @@ namespace API
                 using (MemoryStream msDecrypt = new MemoryStream(cipherText))
                 {
                     byte[] pre_cipher = msDecrypt.ToArray();
+                    // msDecrypt.
                     // plaintext = Encoding.Default.GetString(plainTextArr)
                     log.LogInformation("pre cipher length - {0}", pre_cipher.Length);
-                    log.LogInformation(Encoding.Default.GetString(pre_cipher));
+                    log.LogInformation(Encoding.ASCII.GetString(pre_cipher));
 
-                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Write))
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
                     {
-                        try {
-                            csDecrypt.Write(cipherText);
-                        }
-                        catch (Exception e) {
-                            log.LogInformation(e.ToString());
-                        }
+                        // try {
+                        //     csDecrypt.Write(cipherText);
+                        // }
+                        // catch (Exception e) {
+                        //     log.LogInformation(e.ToString());
+                        // }
+                        // csDecrypt.
                         // using (StreamReader srDecrypt = new StreamReader(csDecrypt))
                         // {
 
@@ -139,28 +141,34 @@ namespace API
                         //     byte[] plTxt = msDecrypt.
                         //     plaintext = srDecrypt.ReadToEnd();
                         // }
-
-                    }
-                    try 
-                    {
-                        byte[] plainTextArr = msDecrypt.ToArray();
-
-                        for (int i = plainTextArr.Length - 1; i > 0; i--) {
-                            if (plainTextArr[i] != 0) {
-                                // log.LogInformation("null char - {0}", 0);
-                                // log.LogInformation("padding ends with {0} at {1}", plainTextArr[i], i);
-                                log.LogInformation("message ends with {0} at {1}", plainTextArr[i], i);
-                                log.LogInformation((plainTextArr.Length - i).ToString());
-                                break;
-                            }
+                        using(StreamReader srDecrypt = new StreamReader(csDecrypt)) {
+                            plaintext = srDecrypt.ReadToEnd();
+                            log.LogInformation(plaintext);
                         }
-                        // for (int i = )
-                        plaintext = Encoding.Default.GetString(plainTextArr);
+
                     }
-                    catch (Exception e)
-                    {
-                        log.LogInformation(e.ToString());
-                    }
+                    // try 
+                    // {
+                    //     // msDecrypt.
+                    //     byte[] plainTextArr = msDecrypt.ToArray();
+
+                    //     for (int i = 0; i < plainTextArr.Length; i++) {
+                    //         log.LogInformation(plainTextArr[i].ToString());
+                    //         // if (plainTextArr[i] != 0) {
+                    //             // log.LogInformation("null char - {0}", 0);
+                    //             // log.LogInformation("padding ends with {0} at {1}", plainTextArr[i], i);
+                    //             // log.LogInformation("message ends with {0} at {1}", plainTextArr[i], i);
+                    //             // log.LogInformation((plainTextArr.Length - i).ToString());
+                    //             // break;
+                    //         // }
+                    //     }
+                    //     // for (int i = )
+                    //     plaintext = Encoding.ASCII.GetString(plainTextArr);
+                    // }
+                    // catch (Exception e)
+                    // {
+                    //     log.LogInformation(e.ToString());
+                    // }
                 }
             }
 
