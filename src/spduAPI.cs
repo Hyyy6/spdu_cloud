@@ -30,6 +30,7 @@ namespace API
 
             await storageBlob.CreateIfNotExistsAsync();
             byte[] reqBody = {};
+            byte[] iv = new byte[16];
             string requestBody;
             int contentLength;
             // string requestBody = await new StreamReader(req.Body).ReadAsync();
@@ -40,8 +41,9 @@ namespace API
                 contentLength = (int)req.ContentLength;
             }
             try {
-                reqBody = new byte[contentLength];
-                await req.Body.ReadAsync(reqBody, 0, contentLength);
+                reqBody = new byte[contentLength - 16];
+                await req.Body.ReadAsync(reqBody, 0, contentLength - 16);
+                await req.Body.ReadAsync(iv, 0, 16);
             } catch (Exception e) {
                 log.LogInformation(e.Message);
             }
@@ -53,7 +55,7 @@ namespace API
             {
                 string key = "abcdefghijklmnop";
                 byte[] buf = reqBody;
-                string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.ASCII.GetBytes(key), Encoding.ASCII.GetBytes(key));
+                string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.ASCII.GetBytes(key), iv);
                 log.LogInformation(decrypted);
                 requestBody = decrypted;
             }
