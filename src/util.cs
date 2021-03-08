@@ -27,12 +27,12 @@ namespace utils
     {
         private static bool _authenticate(SPDURequest request)
         {
-            string name = request.name;
+            // string name = request.name;
             string pwd = request.password;
             byte[] hashed_data;
             string hashed_pwd;
             
-            if (String.IsNullOrWhiteSpace(name) || String.IsNullOrWhiteSpace(pwd))
+            if (String.IsNullOrWhiteSpace(pwd))
                 return false;
 
             using (SHA256 hasher = SHA256.Create())
@@ -44,7 +44,7 @@ namespace utils
             var secPass = Environment.GetEnvironmentVariable("secret");
             if (String.Compare(secPass, hashed_pwd) == 0)
             {
-                SPDUAPI.log.LogInformation("Successful authentitication for {0}.", name);
+                SPDUAPI.log.LogInformation("Successful authentitication for ard.");
                 return true;
             }
             return false;
@@ -75,7 +75,7 @@ namespace utils
             try
             {
                 request = JsonSerializer.Deserialize<SPDURequest>(Convert.ToString(reqData));
-                if (String.IsNullOrEmpty(request.payload.deviceName) || !_validateIP(request.payload.ipAddress))
+                if (!_validateIP(request.ipAddress))
                 {
                     return false;
                 }
@@ -106,13 +106,13 @@ namespace utils
                 return result;
             }
 
-            SPDUPayload payload = request.payload;
+            // SPDUPayload payload = request.payload;
 
-            CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference(payload.deviceName);
+            CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference("arduino");
 
-            await cloudBlob.UploadTextAsync(payload.ipAddress + "\ntime: " + DateTime.Now.ToString());
+            await cloudBlob.UploadTextAsync(request.ipAddress + "\ntime: " + DateTime.Now.ToString());
             SPDUAPI.log.LogInformation("Put data req processed.");
-            return new OkObjectResult(String.Format("Updated {0} local IP address to {1}", payload.deviceName, payload.ipAddress));
+            return new OkObjectResult(String.Format("Updated ard local IP address to {0}", request.ipAddress));
 
         }
 
@@ -121,10 +121,10 @@ namespace utils
             try
             {
                 request = JsonSerializer.Deserialize<SPDURequest>(Convert.ToString(reqData));
-                if (String.IsNullOrEmpty(request.payload.deviceName))
-                {
-                    return false;
-                }
+                // if (String.IsNullOrEmpty(request.payload.deviceName))
+                // {
+                //     return false;
+                // }
                 return true;
             }
             catch (Exception e)
@@ -152,8 +152,8 @@ namespace utils
                 return result;
             }
 
-            SPDUPayload payload = request.payload;
-            CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference(payload.deviceName);
+            // SPDUPayload payload = request.payload;
+            CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference("arduino");
 
             if (await cloudBlob.ExistsAsync())
             {
