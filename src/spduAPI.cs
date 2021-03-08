@@ -49,7 +49,7 @@ namespace API
             }
 
             log.LogInformation("request length - {0}", contentLength);
-            log.LogInformation(Encoding.ASCII.GetString(reqBody, 0, contentLength));
+            log.LogInformation(Encoding.ASCII.GetString(reqBody, 0, contentLength - 16));
 
             using (Aes cypher = Aes.Create())
             {
