@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using utils;
 using System.Security.Cryptography;
 
+
 namespace API
 {
     public static class SPDUAPI
@@ -25,49 +26,66 @@ namespace API
         {
 
             IActionResult result;
+            string requestBody;
+            int contentLength;
+            dynamic reqData;
+
             log = _log;
             log.LogInformation("Processed {0} HTTP request.", req.Method, req);
 
             await storageBlob.CreateIfNotExistsAsync();
-            byte[] reqBody = {};
-            byte[] iv = new byte[16];
-            string requestBody;
-            int contentLength;
-            // string requestBody = await new StreamReader(req.Body).ReadAsync();
-            if (req.ContentLength <= 0) {
-                log.LogInformation("Invalid content length.");
-                return new BadRequestObjectResult("Invalid content length.");
-            } else {
-                contentLength = (int)req.ContentLength;
-            }
-            try {
-                reqBody = new byte[contentLength - 16];
-                await req.Body.ReadAsync(reqBody, 0, contentLength - 16);
-                await req.Body.ReadAsync(iv, 0, 16);
-            } catch (Exception e) {
-                log.LogInformation(e.Message);
-            }
-
-            log.LogInformation("request length - {0}", contentLength);
-            log.LogInformation(Encoding.ASCII.GetString(reqBody, 0, contentLength - 16));
-
-            using (Aes cypher = Aes.Create())
-            {
-                string key = "abcdefghijklmnop";
-                byte[] buf = reqBody;
-                string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.ASCII.GetBytes(key), iv);
-                log.LogInformation(decrypted);
-                requestBody = decrypted;
-            }
-
-            var reqData = JsonConvert.DeserializeObject(requestBody);
 
             switch (req.Method) {
                 case "PUT":
+                    byte[] reqBody = {};
+                    byte[] iv = new byte[16];
+                    // string requestBody = await new StreamReader(req.Body).ReadAsync();
+                    if (req.ContentLength <= 0) {
+                        log.LogInformation("Invalid content length.");
+                        return new BadRequestObjectResult("Invalid content length.");
+                    } else {
+                        contentLength = (int)req.ContentLength;
+                    }
+                    try {
+                        reqBody = new byte[contentLength - 16];
+                        await req.Body.ReadAsync(reqBody, 0, contentLength - 16);
+                        await req.Body.ReadAsync(iv, 0, 16);
+                    } catch (Exception e) {
+                        log.LogInformation(e.Message);
+                    }
+
+                    log.LogInformation("request length - {0}", contentLength);
+                    log.LogInformation(Encoding.ASCII.GetString(reqBody, 0, contentLength - 16));
+
+                    using (Aes cypher = Aes.Create())
+                    {
+                        // string key = "abcdefghijklmnop";
+                        string key = System.Environment.GetEnvironmentVariable("secret");
+                        byte[] buf = reqBody;
+                        string decrypted = DecryptStringFromBytes_Aes(buf, Encoding.ASCII.GetBytes(key), iv);
+                        log.LogInformation(decrypted);
+                        requestBody = decrypted;
+                    }
+            
+                    reqData = JsonConvert.DeserializeObject(requestBody);
+
                     result = await BlobRoutine.putData(reqData, storageBlob);
                     return new OkObjectResult(result);
                 
                 case "POST":
+                    if (req.ContentLength <= 0)
+                    {
+                        log.LogInformation("Invalid content length.");
+                        return new BadRequestObjectResult("Invalid content length.");
+                    }
+                    else
+                    {
+                        contentLength = (int)req.ContentLength;
+                    }
+
+                    requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                    log.LogInformation(requestBody);
+                    reqData = JsonConvert.DeserializeObject(requestBody);
                     result = await BlobRoutine.getData(reqData, storageBlob);
                     return new OkObjectResult(result);
 

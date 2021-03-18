@@ -25,7 +25,7 @@ namespace utils
 
     public static class BlobRoutine
     {
-        private static bool _authenticate(SPDURequest request)
+        private static bool _authenticate(ReqMin request)
         {
             // string name = request.name;
             string pwd = request.password;
@@ -41,7 +41,7 @@ namespace utils
                 hashed_pwd = BitConverter.ToString(hashed_data);
             }
             
-            var secPass = Environment.GetEnvironmentVariable("secret");
+            var secPass = Environment.GetEnvironmentVariable("password");
             if (String.Compare(secPass, hashed_pwd) == 0)
             {
                 SPDUAPI.log.LogInformation("Successful authentitication for ard.");
@@ -107,24 +107,28 @@ namespace utils
             }
 
             // SPDUPayload payload = request.payload;
-
+            BlobEntry data = new BlobEntry();
+            data.ipAddress = request.ipAddress;
+            data.date = DateTime.Now.ToString();
+            // data.key = Encoding.ASCII.GetBytes(request.key);//request.key;
+            data.key = request.key;
             CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference("arduino");
 
-            await cloudBlob.UploadTextAsync(request.ipAddress + "\ntime: " + DateTime.Now.ToString());
+            await cloudBlob.UploadTextAsync(JsonSerializer.Serialize(data));
             SPDUAPI.log.LogInformation("Put data req processed.");
             return new OkObjectResult(String.Format("Updated ard local IP address to {0}", request.ipAddress));
 
         }
 
-        private static bool _validateGetData(object reqData, out SPDURequest request)
+        private static bool _validateGetData(object reqData, out ReqMin request)
         {
             try
             {
-                request = JsonSerializer.Deserialize<SPDURequest>(Convert.ToString(reqData));
-                // if (String.IsNullOrEmpty(request.payload.deviceName))
-                // {
+                request = JsonSerializer.Deserialize<ReqMin>(Convert.ToString(reqData));
+                
+                // if (!_authenticate(request))
                 //     return false;
-                // }
+                
                 return true;
             }
             catch (Exception e)
@@ -137,7 +141,7 @@ namespace utils
         }
         public static async Task<IActionResult> getData(dynamic reqData, CloudBlobContainer storageBlob)
         {
-            SPDURequest request;
+            ReqMin request;
             if (!_validateGetData(reqData, out request))
             {
                 ObjectResult result = new ObjectResult("Could not parse input.");
