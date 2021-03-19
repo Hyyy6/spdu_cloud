@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
@@ -35,12 +36,16 @@ namespace API
 
             await storageBlob.CreateIfNotExistsAsync();
 
+            // var dict = new Dictionary(req.Headers)
+            // log.LogInformation("Headers: " +);
             switch (req.Method) {
                 case "PUT":
                     byte[] reqBody = {};
                     byte[] iv = new byte[16];
                     // string requestBody = await new StreamReader(req.Body).ReadAsync();
-                    if (req.ContentLength <= 0) {
+                    string tmp = "Content-Length";
+                    log.LogInformation(req.Headers[tmp]);
+                    if (!req.Headers.ContainsKey("Content-Length") || req.ContentLength <= 0) {
                         log.LogInformation("Invalid content length.");
                         return new BadRequestObjectResult("Invalid content length.");
                     } else {
