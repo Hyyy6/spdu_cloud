@@ -40,8 +40,10 @@ namespace utils
                 hashed_data = hasher.ComputeHash(Encoding.ASCII.GetBytes(pwd));
                 hashed_pwd = BitConverter.ToString(hashed_data);
             }
-            
+            // SPDUAPI.log.LogInformation("pwd = {0}", pwd);
+            // SPDUAPI.log.LogInformation("hashed_pwd = {0}", hashed_pwd);
             var secPass = Environment.GetEnvironmentVariable("password");
+
             if (String.Compare(secPass, hashed_pwd) == 0)
             {
                 SPDUAPI.log.LogInformation("Successful authentitication for ard.");
@@ -75,6 +77,7 @@ namespace utils
             try
             {
                 request = JsonSerializer.Deserialize<SPDURequest>(Convert.ToString(reqData));
+                
                 if (!_validateIP(request.ipAddress))
                 {
                     return false;
@@ -107,11 +110,21 @@ namespace utils
             }
 
             // SPDUPayload payload = request.payload;
+            int stateLength = 0;
             BlobEntry data = new BlobEntry();
             data.ipAddress = request.ipAddress;
             data.date = DateTime.Now.ToString();
             // data.key = Encoding.ASCII.GetBytes(request.key);//request.key;
             data.key = request.key;
+            try {
+                stateLength = request.state.Length;
+                data.state = new int[stateLength];
+                Array.Copy(request.state, data.state, stateLength);
+            } catch (Exception e) {
+                SPDUAPI.log.LogInformation("Bad request: {0}.", e.ToString());
+                ObjectResult result = new ObjectResult("Bad state in request");
+                return result;
+            }
             CloudBlockBlob cloudBlob = storageBlob.GetBlockBlobReference("arduino");
 
             await cloudBlob.UploadTextAsync(JsonSerializer.Serialize(data));

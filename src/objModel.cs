@@ -13,6 +13,7 @@ namespace objectModels
         // public string deviceName {get; set;}
         public string ipAddress {get; set;}
         public string key {get; set;}
+        public int[] state {get; set;}
     }
 
     // public class ClientRequest
@@ -25,6 +26,8 @@ namespace objectModels
         public string ipAddress {get; set;}
         public string date {get; set;}
         public string key {get; set;}
+
+        public int[] state {get; set;}
     }
 
     // public class SPDUPayload
